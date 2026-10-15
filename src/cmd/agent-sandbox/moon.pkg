@@ -1,0 +1,6 @@
+import {
+  "snorfyang/agent-tool-sandbox" @sandbox,
+  "moonbitlang/core/env",
+}
+
+pkgtype(kind: "executable")

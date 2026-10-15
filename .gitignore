@@ -1,0 +1,44 @@
+# MoonSandbox public repository rule:
+# Never commit private development-process artifacts.
+# Keep proposals, handoffs, transcripts, prompts, agent state, and scratch work outside this repository.
+
+# Build output
+_build/
+.mooncakes/
+
+# Private development artifacts
+handoff/
+.handoff/
+**/handoff/
+**/.handoff/
+session/
+sessions/
+**/session/
+**/sessions/
+transcript/
+transcripts/
+**/transcript/
+**/transcripts/
+agent-state/
+.agent-state/
+**/agent-state/
+**/.agent-state/
+scratch/
+.scratches/
+**/scratch/
+**/.scratch/
+
+# Proposals and private submission material
+申报书*
+proposal*
+**/申报书*
+**/proposal*
+*.pdf
+
+# Local credentials and editor state
+.env
+.env.*
+!.env.example
+.DS_Store
+.vscode/
+.idea/
