@@ -84,7 +84,7 @@ MoonSandbox 保护的是受控的 WASM/WASI Agent 工具，不是已经拥有宿
 2. 下一步：策略文件、WIT 工具接口、WASI 执行后端、资源限制和 JSONL 审计。
 3. 后续：审批 token、MCP stdio adapter、可替换的 macOS/Linux process backend。
 
-详见 [申报书](docs/申报书.md) 和 [策略示例](examples/policy.toml)。
+详见 [架构说明](docs/architecture.md) 和 [策略示例](examples/policy.toml)。申报材料不放入公开仓库。
 
 ## 参考
 
