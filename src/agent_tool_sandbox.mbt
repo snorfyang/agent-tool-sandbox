@@ -39,10 +39,24 @@ pub struct Rule {
 }
 
 ///|
+pub fn Rule::new(
+  capability : Capability,
+  pattern : String,
+  decision : Decision,
+) -> Rule {
+  { capability, pattern, decision, }
+}
+
+///|
 
 ///|
 pub struct Policy {
   rules : Array[Rule]
+}
+
+///|
+pub fn Policy::new(rules : Array[Rule]) -> Policy {
+  { rules, }
 }
 
 ///|

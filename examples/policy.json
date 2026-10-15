@@ -1,0 +1,10 @@
+{
+  "rules": [
+    { "capability": "fs.read", "pattern": "workspace/src/**", "decision": "allow" },
+    { "capability": "fs.read", "pattern": "workspace/test/**", "decision": "allow" },
+    { "capability": "fs.write", "pattern": "workspace/out/**", "decision": "allow" },
+    { "capability": "fs.write", "pattern": "workspace/_build/**", "decision": "allow" },
+    { "capability": "net.connect", "pattern": "**", "decision": "deny" },
+    { "capability": "env.read", "pattern": "LANG", "decision": "allow" }
+  ]
+}

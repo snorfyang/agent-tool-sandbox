@@ -4,7 +4,7 @@
 
 一个 Agent 正在帮你修复 MoonBit 项目。它需要读取源码、修改文件、运行测试；但仓库里的 README、依赖脚本或网页内容也可能诱导它读取 `~/.ssh`、上传源码，或者改写项目目录之外的文件。
 
-每次操作都要求人工确认，Agent 就失去了自动化价值；完全放开权限，又等于把你的电脑交给一个会被上下文影响的程序。MoonSandbox 在两者之间提供一个明确的执行边界：工具进入一个默认空白的 WASM/WASI 工作空间，只有策略明确授予的文件、网络和环境能力才会出现。
+每次操作都要求人工确认，Agent 就失去了自动化价值；完全放开权限，又等于把你的电脑交给一个会被上下文影响的程序。MoonSandbox 在两者之间提供一个明确的控制边界：工具请求先经过 capability policy；下一阶段的 WASM/WASI backend 将把获准的资源注入一个默认空白的工具工作空间。
 
 ## 它做什么
 
@@ -20,7 +20,7 @@ MoonSandbox 检查 capability 和资源
 记录访问、结果和拒绝原因
 ```
 
-当前 MVP 已经实现了权限决策核心：
+当前 MVP 是可运行的权限控制面，已经实现了：
 
 - `fs.read`、`fs.write`、`net.connect`、`env.read` 四类 capability；
 - 默认拒绝；
@@ -29,7 +29,7 @@ MoonSandbox 检查 capability 和资源
 - 可解释的 `ALLOW` / `DENY` / `ASK` 决策；
 - 工具 manifest 独立 capability 边界；
 - JSONL-compatible 审计事件；
-- MoonBit CLI 走查和 5 个单元测试。
+- MoonBit CLI 走查和 11 个单元测试。
 
 ## 一个完整场景
 
@@ -84,7 +84,7 @@ MoonSandbox 保护的是受控的 WASM/WASI Agent 工具，不是已经拥有宿
 2. 下一步：策略文件、WIT 工具接口、WASI 执行后端、资源限制和 JSONL 审计。
 3. 后续：审批 token、MCP stdio adapter、可替换的 macOS/Linux process backend。
 
-详见 [架构说明](docs/architecture.md) 和 [策略示例](examples/policy.toml)。申报材料不放入公开仓库。
+详见 [快速开始](docs/getting-started.md)、[架构说明](docs/architecture.md)、[威胁模型](docs/threat-model.md) 和 [JSON 策略示例](examples/policy.json)。申报材料不放入公开仓库。
 
 ## 参考
 
