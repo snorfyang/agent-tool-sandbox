@@ -15,7 +15,3 @@ preferred_target = "native"
 description = "Capability policy engine for Agent tools"
 
 keywords = [ "agent", "sandbox", "capability", "wasm", "wasi" ]
-
-import {
-  "moonbitlang/async@0.21.3",
-}
