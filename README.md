@@ -56,7 +56,8 @@ Agent 可以：
 ## 运行 MVP
 
 ```bash
-moon fmt --check
+# MoonBit 0.1.x currently reports backend-specific formatter differences as warnings.
+moon fmt --warn
 moon check --deny-warn
 moon test --deny-warn
 

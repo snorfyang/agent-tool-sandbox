@@ -5,7 +5,7 @@ MoonSandbox currently ships the control-plane MVP. It evaluates a tool manifest 
 ## Run the control-plane demo
 
 ```bash
-moon fmt --check
+moon fmt --warn
 moon check --deny-warn
 moon test --deny-warn
 
