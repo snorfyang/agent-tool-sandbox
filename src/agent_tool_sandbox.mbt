@@ -373,6 +373,62 @@ pub fn AuditLog::to_jsonl(self : AuditLog) -> String {
 }
 
 ///|
+/// Stateful runtime facade for one tool session.
+pub struct Runtime {
+  policy : Policy
+  manifest : ToolManifest
+  mut requests_used : Int
+  log : AuditLog
+}
+
+///|
+pub fn Runtime::new(
+  policy : Policy,
+  manifest : ToolManifest,
+) -> Result[Runtime, String] {
+  match (policy.validate(), manifest.validate()) {
+    (Ok(_), Ok(_)) =>
+      Ok({ policy, manifest, requests_used: 0, log: AuditLog::new(), })
+    (Err(message), _) => Err("policy rejected: " + message)
+    (_, Err(message)) => Err("manifest rejected: " + message)
+  }
+}
+
+///|
+/// Evaluate and record one request, enforcing the manifest request budget.
+pub fn Runtime::request(self : Runtime, request : Request) -> Decision {
+  let decision = if self.requests_used >= self.manifest.limits.max_requests {
+    Deny
+  } else {
+    self.requests_used += 1
+    let (decision, event) = authorize_manifest(
+      self.policy,
+      self.manifest,
+      request,
+    )
+    self.log.append(event)
+    decision
+  }
+  if self.requests_used >= self.manifest.limits.max_requests && decision == Deny {
+    self.log.append(
+      AuditEvent::new(
+        self.manifest.name,
+        FsRead,
+        "runtime",
+        Deny,
+        "request budget exhausted",
+      ),
+    )
+  }
+  decision
+}
+
+///|
+pub fn Runtime::audit_jsonl(self : Runtime) -> String {
+  self.log.to_jsonl()
+}
+
+///|
 /// Parse the MVP JSON policy format.
 pub fn policy_from_json(text : String) -> Result[Policy, String] {
   let value = @json.parse(text) catch {

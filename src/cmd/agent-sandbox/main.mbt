@@ -6,6 +6,7 @@ let usage =
   #|  agent-sandbox check --cap net.connect --resource api.example.com
   #|  agent-sandbox policy
   #|  agent-sandbox audit-demo
+  #|  agent-sandbox runtime-demo
 
 ///|
 fn print_decision(decision : @sandbox.Decision) -> Unit {
@@ -51,6 +52,28 @@ fn main {
       @sandbox.Ask => println("ASK")
     }
     println(@sandbox.audit_event_json(event))
+    return
+  }
+  if args.length() == 2 && args[1] == "runtime-demo" {
+    let manifest = @sandbox.ToolManifest::with_limits(
+      "reader",
+      [@sandbox.FsRead],
+      @sandbox.Limits::new(1000, 4096, 1),
+    )
+    match @sandbox.Runtime::new(@sandbox.project_policy(), manifest) {
+      Ok(runtime) => {
+        let decision = runtime.request(
+          @sandbox.Request::new(
+            "reader",
+            @sandbox.FsRead,
+            "workspace/src/main.mbt",
+          ),
+        )
+        print_decision(decision)
+        println(runtime.audit_jsonl())
+      }
+      Err(message) => println("runtime rejected: " + message)
+    }
     return
   }
   if args.length() != 6 ||

@@ -293,3 +293,37 @@ test "manifest JSON validates declarations and limits" {
     is Err(_),
   )
 }
+
+///|
+test "runtime composes authorization and request budget" {
+  let manifest = @agent-tool-sandbox.ToolManifest::with_limits(
+    "reader",
+    [@agent-tool-sandbox.FsRead],
+    @agent-tool-sandbox.Limits::new(1000, 4096, 1),
+  )
+  let runtime = @agent-tool-sandbox.Runtime::new(
+    @agent-tool-sandbox.project_policy(),
+    manifest,
+  ).unwrap()
+  assert_eq(
+    runtime.request(
+      @agent-tool-sandbox.Request::new(
+        "reader",
+        @agent-tool-sandbox.FsRead,
+        "workspace/src/main.mbt",
+      ),
+    ),
+    @agent-tool-sandbox.Allow,
+  )
+  assert_eq(
+    runtime.request(
+      @agent-tool-sandbox.Request::new(
+        "reader",
+        @agent-tool-sandbox.FsRead,
+        "workspace/src/other.mbt",
+      ),
+    ),
+    @agent-tool-sandbox.Deny,
+  )
+  assert_true(runtime.audit_jsonl().contains("workspace/src/main.mbt"))
+}
