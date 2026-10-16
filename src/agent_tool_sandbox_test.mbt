@@ -250,3 +250,31 @@ test "policy validation rejects dangerous patterns" {
     is Err(_),
   )
 }
+
+///|
+test "audit log preserves event order" {
+  let log = @agent-tool-sandbox.AuditLog::new()
+  log.append(
+    @agent-tool-sandbox.AuditEvent::new(
+      "reader",
+      @agent-tool-sandbox.FsRead,
+      "workspace/src/a",
+      @agent-tool-sandbox.Allow,
+      "matched policy",
+    ),
+  )
+  log.append(
+    @agent-tool-sandbox.AuditEvent::new(
+      "reader",
+      @agent-tool-sandbox.FsRead,
+      "../secret",
+      @agent-tool-sandbox.Deny,
+      "path rejected",
+    ),
+  )
+  assert_eq(log.len(), 2)
+  let jsonl = log.to_jsonl()
+  assert_true(jsonl.has_prefix("{\"tool\":\"reader\""))
+  assert_true(jsonl.contains("path rejected"))
+  assert_true(jsonl.has_suffix("\n"))
+}

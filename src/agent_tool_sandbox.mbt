@@ -275,6 +275,38 @@ pub fn audit_event_json(event : AuditEvent) -> String {
 }
 
 ///|
+/// Append-only audit stream for one Agent session.
+pub struct AuditLog {
+  events : Array[AuditEvent]
+}
+
+///|
+pub fn AuditLog::new() -> AuditLog {
+  { events: [], }
+}
+
+///|
+pub fn AuditLog::append(self : AuditLog, event : AuditEvent) -> Unit {
+  self.events.push(event)
+}
+
+///|
+pub fn AuditLog::len(self : AuditLog) -> Int {
+  self.events.length()
+}
+
+///|
+/// Serialize the session as newline-delimited JSON with a final newline.
+pub fn AuditLog::to_jsonl(self : AuditLog) -> String {
+  let out = StringBuilder()
+  for event in self.events {
+    out.write_string(audit_event_json(event))
+    out.write_char('\n')
+  }
+  out.to_string()
+}
+
+///|
 /// Parse the MVP JSON policy format.
 pub fn policy_from_json(text : String) -> Result[Policy, String] {
   let value = @json.parse(text) catch {
