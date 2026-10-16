@@ -29,7 +29,7 @@ MoonSandbox 检查 capability 和资源
 - 可解释的 `ALLOW` / `DENY` / `ASK` 决策；
 - 工具 manifest 独立 capability 边界；
 - JSONL-compatible 审计事件；
-- MoonBit CLI 走查和 11 个单元测试。
+- MoonBit CLI 走查、stateful runtime 和 16 个单元测试。
 
 ## 一个完整场景
 
@@ -64,6 +64,7 @@ moon run src/cmd/agent-sandbox -- policy
 moon run src/cmd/agent-sandbox -- check --cap fs.read --resource workspace/src/main.mbt
 moon run src/cmd/agent-sandbox -- check --cap fs.read --resource ../.ssh/id_rsa
 moon run src/cmd/agent-sandbox -- audit-demo
+moon run src/cmd/agent-sandbox -- runtime-demo
 ```
 
 ## 从策略到执行事件
@@ -84,7 +85,7 @@ MoonSandbox 保护的是受控的 WASM/WASI Agent 工具，不是已经拥有宿
 2. 下一步：策略文件、WIT 工具接口、WASI 执行后端、资源限制和 JSONL 审计。
 3. 后续：审批 token、MCP stdio adapter、可替换的 macOS/Linux process backend。
 
-详见 [快速开始](docs/getting-started.md)、[架构说明](docs/architecture.md)、[威胁模型](docs/threat-model.md) 和 [JSON 策略示例](examples/policy.json)。申报材料不放入公开仓库。
+详见 [快速开始](docs/getting-started.md)、[架构说明](docs/architecture.md)、[Runtime 契约](docs/runtime.md)、[威胁模型](docs/threat-model.md) 和 [JSON 策略示例](examples/policy.json)。申报材料不放入公开仓库。
 
 ## 参考
 
