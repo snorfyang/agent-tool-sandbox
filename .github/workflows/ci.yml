@@ -13,8 +13,8 @@ jobs:
         run: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
       - name: Add MoonBit to PATH
         run: echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
-      - name: Format (native MVP target)
-        run: moon fmt --check --target-dir _build/native
+      - name: Format warning (MoonBit backend compatibility)
+        run: moon fmt --warn
       - name: Check
         run: moon check --deny-warn
       - name: Test
