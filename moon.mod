@@ -12,6 +12,8 @@ license = "Apache-2.0"
 
 preferred_target = "native"
 
+supported_targets = "+native"
+
 description = "Capability policy engine for Agent tools"
 
 keywords = [ "agent", "sandbox", "capability", "wasm", "wasi" ]
