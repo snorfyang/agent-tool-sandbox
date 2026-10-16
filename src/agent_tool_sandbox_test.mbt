@@ -278,3 +278,18 @@ test "audit log preserves event order" {
   assert_true(jsonl.contains("path rejected"))
   assert_true(jsonl.has_suffix("\n"))
 }
+
+///|
+test "manifest JSON validates declarations and limits" {
+  let manifest = @agent-tool-sandbox.tool_manifest_from_json(
+    "{\"name\":\"reader\",\"capabilities\":[\"fs.read\"],\"limits\":{\"timeout_ms\":1000,\"max_output_bytes\":4096,\"max_requests\":2}}",
+  ).unwrap()
+  assert_true(manifest.has(@agent-tool-sandbox.FsRead))
+  assert_true(manifest.validate() is Ok(_))
+  assert_true(
+    @agent-tool-sandbox.tool_manifest_from_json(
+      "{\"name\":\"reader\",\"capabilities\":[\"unknown\"]}",
+    )
+    is Err(_),
+  )
+}

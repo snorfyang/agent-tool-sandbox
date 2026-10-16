@@ -167,6 +167,72 @@ pub fn ToolManifest::validate(self : ToolManifest) -> Result[Unit, String] {
 }
 
 ///|
+/// Parse a manifest JSON document.
+///
+/// {
+///   "name":"reader",
+///   "capabilities":["fs.read"],
+///   "limits":{"timeout_ms":30000,"max_output_bytes":1048576,"max_requests":128}
+/// }
+pub fn tool_manifest_from_json(text : String) -> Result[ToolManifest, String] {
+  let value = @json.parse(text) catch {
+    _ => return Err("manifest is not valid JSON")
+  }
+  match value {
+    Json::Object(root) => {
+      let name = match root.get("name") {
+        Some(Json::String(value)) => value
+        _ => return Err("manifest.name must be a string")
+      }
+      let capabilities = match root.get("capabilities") {
+        Some(Json::Array(items)) => {
+          let out : Array[Capability] = []
+          for item in items {
+            match item {
+              Json::String(value) =>
+                match capability_from_string(value) {
+                  Some(capability) => out.push(capability)
+                  None => return Err("manifest contains an unknown capability")
+                }
+              _ => return Err("manifest.capabilities must contain strings")
+            }
+          }
+          out
+        }
+        _ => return Err("manifest.capabilities must be an array")
+      }
+      let limits = match root.get("limits") {
+        Some(Json::Object(fields)) => {
+          let timeout_ms = json_int_field(fields, "timeout_ms")
+          let max_output_bytes = json_int_field(fields, "max_output_bytes")
+          let max_requests = json_int_field(fields, "max_requests")
+          match (timeout_ms, max_output_bytes, max_requests) {
+            (Some(a), Some(b), Some(c)) => Limits::new(a, b, c)
+            _ => return Err("manifest.limits has an invalid field")
+          }
+        }
+        None => Limits::default()
+        _ => return Err("manifest.limits must be an object")
+      }
+      let manifest = ToolManifest::with_limits(name, capabilities, limits)
+      match manifest.validate() {
+        Ok(_) => Ok(manifest)
+        Err(message) => Err(message)
+      }
+    }
+    _ => Err("manifest root must be an object")
+  }
+}
+
+///|
+fn json_int_field(fields : Map[String, Json], key : String) -> Int? {
+  match fields.get(key) {
+    Some(Json::Number(value, ..)) => Some(value.to_int())
+    _ => None
+  }
+}
+
+///|
 /// A normalized, machine-readable execution event.
 pub(all) struct AuditEvent {
   tool : String
