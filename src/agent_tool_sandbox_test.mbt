@@ -220,3 +220,33 @@ test "audit escaping protects JSON strings" {
   assert_true(line.contains("reader\\\"tool"))
   assert_true(line.contains("line\\nfile"))
 }
+
+///|
+test "manifest limits and validation are explicit" {
+  let manifest = @agent-tool-sandbox.ToolManifest::with_limits(
+    "reader",
+    [@agent-tool-sandbox.FsRead],
+    @agent-tool-sandbox.Limits::new(1000, 4096, 4),
+  )
+  assert_true(manifest.validate() is Ok(_))
+  let invalid = @agent-tool-sandbox.ToolManifest::with_limits(
+    "reader",
+    [@agent-tool-sandbox.FsRead],
+    @agent-tool-sandbox.Limits::new(0, 4096, 4),
+  )
+  assert_true(invalid.validate() is Err(_))
+}
+
+///|
+test "policy validation rejects dangerous patterns" {
+  assert_true(
+    @agent-tool-sandbox.Policy::new([
+      @agent-tool-sandbox.Rule::new(
+        @agent-tool-sandbox.FsRead,
+        "../outside",
+        @agent-tool-sandbox.Allow,
+      ),
+    ]).validate()
+    is Err(_),
+  )
+}

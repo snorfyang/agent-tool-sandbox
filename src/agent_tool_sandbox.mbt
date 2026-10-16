@@ -60,6 +60,23 @@ pub fn Policy::new(rules : Array[Rule]) -> Policy {
 }
 
 ///|
+/// Validate rules before a policy is installed.
+pub fn Policy::validate(self : Policy) -> Result[Unit, String] {
+  for rule in self.rules {
+    if rule.pattern.is_empty() {
+      return Err("policy rule pattern must not be empty")
+    }
+    if rule.pattern.has_prefix("/") || rule.pattern.has_prefix("\\") {
+      return Err("policy rule pattern must be relative")
+    }
+    if rule.pattern.contains("..") {
+      return Err("policy rule pattern must not contain ..")
+    }
+  }
+  Ok(())
+}
+
+///|
 
 ///|
 pub struct Request {
@@ -82,6 +99,29 @@ pub fn Request::new(
 pub(all) struct ToolManifest {
   name : String
   capabilities : Array[Capability]
+  limits : Limits
+}
+
+///|
+/// Per-tool resource budget enforced by the runtime boundary.
+pub(all) struct Limits {
+  timeout_ms : Int
+  max_output_bytes : Int
+  max_requests : Int
+}
+
+///|
+pub fn Limits::new(
+  timeout_ms : Int,
+  max_output_bytes : Int,
+  max_requests : Int,
+) -> Limits {
+  { timeout_ms, max_output_bytes, max_requests, }
+}
+
+///|
+pub fn Limits::default() -> Limits {
+  { timeout_ms: 30_000, max_output_bytes: 1_048_576, max_requests: 128, }
 }
 
 ///|
@@ -89,12 +129,41 @@ pub fn ToolManifest::new(
   name : String,
   capabilities : Array[Capability],
 ) -> ToolManifest {
-  { name, capabilities, }
+  { name, capabilities, limits: Limits::default(), }
+}
+
+///|
+pub fn ToolManifest::with_limits(
+  name : String,
+  capabilities : Array[Capability],
+  limits : Limits,
+) -> ToolManifest {
+  { name, capabilities, limits, }
 }
 
 ///|
 pub fn ToolManifest::has(self : ToolManifest, capability : Capability) -> Bool {
   self.capabilities.contains(capability)
+}
+
+///|
+pub fn ToolManifest::validate(self : ToolManifest) -> Result[Unit, String] {
+  if self.name.is_empty() {
+    return Err("tool manifest name must not be empty")
+  }
+  if self.limits.timeout_ms <= 0 {
+    return Err("timeout_ms must be positive")
+  }
+  if self.limits.max_output_bytes <= 0 {
+    return Err("max_output_bytes must be positive")
+  }
+  if self.limits.max_requests <= 0 {
+    return Err("max_requests must be positive")
+  }
+  if self.capabilities.is_empty() {
+    return Err("tool manifest must declare at least one capability")
+  }
+  Ok(())
 }
 
 ///|
