@@ -43,3 +43,5 @@ The manifest check and policy check are separate. A tool cannot gain a capabilit
 ## Policy file
 
 `examples/policy.json` is the machine-readable shape planned for the next CLI milestone. The current `policy` command prints the equivalent starter policy so the MVP remains dependency-free at the command boundary.
+
+The library already accepts this format through `policy_from_json`. For tool declarations, pass the contents of [reader-manifest.json](../examples/reader-manifest.json) to `tool_manifest_from_json`. See [configuration validation](configuration.md) for the accepted fields and rejection rules. The CLI does not yet load these files.

@@ -69,6 +69,9 @@ pub fn Policy::validate(self : Policy) -> Result[Unit, String] {
     if rule.pattern.has_prefix("/") || rule.pattern.has_prefix("\\") {
       return Err("policy rule pattern must be relative")
     }
+    if rule.pattern.contains("\\") {
+      return Err("policy rule pattern must not contain backslashes")
+    }
     if rule.pattern.contains("..") {
       return Err("policy rule pattern must not contain ..")
     }
@@ -160,6 +163,13 @@ pub fn ToolManifest::validate(self : ToolManifest) -> Result[Unit, String] {
   if self.limits.max_requests <= 0 {
     return Err("max_requests must be positive")
   }
+  let seen : Array[Capability] = []
+  for capability in self.capabilities {
+    if seen.contains(capability) {
+      return Err("tool manifest contains a duplicate capability")
+    }
+    seen.push(capability)
+  }
   if self.capabilities.is_empty() {
     return Err("tool manifest must declare at least one capability")
   }
@@ -180,6 +190,11 @@ pub fn tool_manifest_from_json(text : String) -> Result[ToolManifest, String] {
   }
   match value {
     Json::Object(root) => {
+      match
+        validate_fields(root, ["name", "capabilities", "limits"], "manifest") {
+        Err(message) => return Err(message)
+        Ok(_) => ()
+      }
       let name = match root.get("name") {
         Some(Json::String(value)) => value
         _ => return Err("manifest.name must be a string")
@@ -203,6 +218,15 @@ pub fn tool_manifest_from_json(text : String) -> Result[ToolManifest, String] {
       }
       let limits = match root.get("limits") {
         Some(Json::Object(fields)) => {
+          match
+            validate_fields(
+              fields,
+              ["timeout_ms", "max_output_bytes", "max_requests"],
+              "manifest.limits",
+            ) {
+            Err(message) => return Err(message)
+            Ok(_) => ()
+          }
           let timeout_ms = json_int_field(fields, "timeout_ms")
           let max_output_bytes = json_int_field(fields, "max_output_bytes")
           let max_requests = json_int_field(fields, "max_requests")
@@ -227,7 +251,17 @@ pub fn tool_manifest_from_json(text : String) -> Result[ToolManifest, String] {
 ///|
 fn json_int_field(fields : Map[String, Json], key : String) -> Int? {
   match fields.get(key) {
-    Some(Json::Number(value, ..)) => Some(value.to_int())
+    Some(Json::Number(value, ..)) => {
+      if value < 1.0 || value > 2147483647.0 {
+        return None
+      }
+      let integer = value.to_int()
+      if integer.to_double() != value {
+        None
+      } else {
+        Some(integer)
+      }
+    }
     _ => None
   }
 }
@@ -435,13 +469,26 @@ pub fn policy_from_json(text : String) -> Result[Policy, String] {
     _ => return Err("policy is not valid JSON")
   }
   match value {
-    Json::Object(root) =>
+    Json::Object(root) => {
+      match validate_fields(root, ["rules"], "policy") {
+        Err(message) => return Err(message)
+        Ok(_) => ()
+      }
       match root.get("rules") {
         Some(Json::Array(items)) => {
           let rules : Array[Rule] = []
           for item in items {
             match item {
               Json::Object(fields) => {
+                match
+                  validate_fields(
+                    fields,
+                    ["capability", "pattern", "decision"],
+                    "policy rule",
+                  ) {
+                  Err(message) => return Err(message)
+                  Ok(_) => ()
+                }
                 let cap = match fields.get("capability") {
                   Some(Json::String(value)) => capability_from_string(value)
                   _ => None
@@ -466,10 +513,15 @@ pub fn policy_from_json(text : String) -> Result[Policy, String] {
               _ => return Err("each item in rules must be an object")
             }
           }
-          Ok({ rules, })
+          let policy = Policy::new(rules)
+          match policy.validate() {
+            Ok(_) => Ok(policy)
+            Err(message) => Err(message)
+          }
         }
         _ => Err("policy.rules must be an array")
       }
+    }
     _ => Err("policy root must be an object")
   }
 }
@@ -572,7 +624,7 @@ pub fn project_policy() -> Policy {
       { capability: FsRead, pattern: "workspace/test/**", decision: Allow, },
       { capability: FsWrite, pattern: "workspace/out/**", decision: Allow, },
       { capability: FsWrite, pattern: "workspace/_build/**", decision: Allow, },
-      { capability: NetConnect, pattern: "*", decision: Deny, },
+      { capability: NetConnect, pattern: "**", decision: Deny, },
       { capability: EnvRead, pattern: "LANG", decision: Allow, },
     ],
   }
@@ -585,4 +637,18 @@ fn escape_json(value : String) -> String {
   .replace(old="\\", new="\\\\")
   .replace(old="\"", new="\\\"")
   .replace(old="\n", new="\\n")
+}
+
+///|
+fn validate_fields(
+  fields : Map[String, Json],
+  allowed : Array[String],
+  context : String,
+) -> Result[Unit, String] {
+  for key, _ in fields {
+    if !allowed.contains(key) {
+      return Err(context + " contains unknown field: " + key)
+    }
+  }
+  Ok(())
 }

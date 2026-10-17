@@ -327,3 +327,89 @@ test "runtime composes authorization and request budget" {
   )
   assert_true(runtime.audit_jsonl().contains("workspace/src/main.mbt"))
 }
+
+///|
+test "manifest budgets reject fractions and overflow without truncation" {
+  for
+    invalid in [
+      "0", "-1", "0.5", "1.5", "2147483648", "1e100", "\"10\"", "null",
+    ] {
+    for field in ["timeout_ms", "max_output_bytes", "max_requests"] {
+      let fields = ["timeout_ms", "max_output_bytes", "max_requests"]
+        .map(fn(key) {
+          let value = if key == field { invalid } else { "10" }
+          "\"" + key + "\":" + value
+        })
+        .join(",")
+      let document = "{\"name\":\"reader\",\"capabilities\":[\"fs.read\"],\"limits\":{" +
+        fields +
+        "}}"
+      assert_true(
+        @agent-tool-sandbox.tool_manifest_from_json(document) is Err(_),
+      )
+    }
+  }
+  let maximum = @agent-tool-sandbox.tool_manifest_from_json(
+    "{\"name\":\"reader\",\"capabilities\":[\"fs.read\"],\"limits\":{\"timeout_ms\":2147483647,\"max_output_bytes\":1,\"max_requests\":1}}",
+  ).unwrap()
+  assert_eq(maximum.limits.timeout_ms, 2147483647)
+}
+
+///|
+test "unknown configuration fields fail closed" {
+  for
+    document in [
+      "{\"rules\":[],\"default\":\"allow\"}", "{\"rules\":[{\"capability\":\"fs.read\",\"pattern\":\"workspace/**\",\"decision\":\"allow\",\"except\":\"secrets\"}]}",
+    ] {
+    assert_true(@agent-tool-sandbox.policy_from_json(document) is Err(_))
+  }
+  for
+    document in [
+      "{\"name\":\"reader\",\"capabilities\":[\"fs.read\"],\"limit\":1}", "{\"name\":\"reader\",\"capabilities\":[\"fs.read\"],\"limits\":{\"timeout_ms\":10,\"max_output_bytes\":10,\"max_requests\":10,\"max_request\":1}}",
+    ] {
+    assert_true(@agent-tool-sandbox.tool_manifest_from_json(document) is Err(_))
+  }
+}
+
+///|
+test "duplicate manifest capabilities are rejected by both entry points" {
+  assert_true(
+    @agent-tool-sandbox.tool_manifest_from_json(
+      "{\"name\":\"reader\",\"capabilities\":[\"fs.read\",\"fs.read\"]}",
+    )
+    is Err(_),
+  )
+  let manifest = @agent-tool-sandbox.ToolManifest::new("reader", [
+    @agent-tool-sandbox.FsRead,
+    @agent-tool-sandbox.FsRead,
+  ])
+  assert_true(
+    @agent-tool-sandbox.Runtime::new(
+      @agent-tool-sandbox.project_policy(),
+      manifest,
+    )
+    is Err(_),
+  )
+}
+
+///|
+test "JSON policy cannot bypass validation and empty policy denies" {
+  assert_true(
+    @agent-tool-sandbox.policy_from_json(
+      "{\"rules\":[{\"capability\":\"fs.read\",\"pattern\":\"../secret\",\"decision\":\"allow\"}]}",
+    )
+    is Err(_),
+  )
+  let policy = @agent-tool-sandbox.policy_from_json("{\"rules\":[]}").unwrap()
+  assert_eq(
+    @agent-tool-sandbox.authorize(
+      policy,
+      @agent-tool-sandbox.Request::new(
+        "reader",
+        @agent-tool-sandbox.FsRead,
+        "workspace/src/main.mbt",
+      ),
+    ),
+    @agent-tool-sandbox.Deny,
+  )
+}
